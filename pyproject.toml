@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cmsutils"
+version = "0.1.0"
+description = "A Django app for automating SEO tasks in Django CMS."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name="horrocksm", email="horrocksm@ltegroup.co.uk" }
+]
+keywords = ["django", "meta"]
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "Django>=5.2,<6.0",
+    "django-cms>5.0,<5.1",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.0.0",
+    "coverage",
+    "debugpy",
+    "djangocms-alias",
+    "djangocms-versioning",
+    "django-filer>=2.0",
+    "django-treebeard<=5.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://git.ltegroup.co.uk/web-dev-external/django_cmsutils"
+Documentation = "https://git.ltegroup.co.uk/web-dev-external/django_cmsutils#readme"
+Repository = "https://git.ltegroup.co.uk/web-dev-external/django_cmsutils.git"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+cmsutils = ["templates/**/*.html"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cmsutils*"]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "migrations",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "S",    # bandit security
+    "SIM",  # flake8-simplify
+    "S",    # bandit security
+    "I",    # isort
+    # "C4",   # flake8-comprehensions
+    # "DJ",   # flake8-django
+    # "RUF",  # Ruff-specific rules
+    # "T20",  # flake8-print
+    # "N",    # pep8-naming
+    # "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "S101",  # use of assert (OK in tests)
+    "S106",  # hardcoded password (OK in tests/examples)
+    "DJ001",  # nullable CharField should have null=True
+    "T201",  # print statement (OK in management commands)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports
+"tests/*" = ["S101", "S106", "S311"]  # Allow asserts, hardcoded passwords, and pseudo-random generators in tests
+"*/migrations/*" = ["N806", "N999"]  # Allow non-lowercase variables in migrations
+
+[tool.ruff.lint.isort]
+known-third-party = ["django", "cms"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

@@ -1,0 +1,33 @@
+{% load cms_tags static sekizai_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo Site</title>
+
+    {% block canonical %}{% endblock canonical %}
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous">
+
+    {% load sekizai_tags cms_tags %}
+    {% render_block "css" %}
+  </head>
+  <body>
+    {% cms_toolbar %}
+    <main class="container">
+      <h1>Demo Site</h1>
+      <p>This is a minimal template for django CMS.</p>
+      {% placeholder "content" %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+      crossorigin="anonymous"></script>
+
+    {% render_block "js" %}
+
+  </body>
+  </html>

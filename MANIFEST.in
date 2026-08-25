@@ -1,0 +1,7 @@
+include LICENSE
+include README.md
+recursive-include cmsutils/static *
+recursive-include cmsutils/templates *
+recursive-include cmsutils/management *
+recursive-include docs *
+global-exclude *.py[cod]
