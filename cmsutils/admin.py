@@ -7,6 +7,7 @@ from django.urls import path
 
 from cmsutils.forms import CSVUploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
+from cmsutils.utils import get_image_by_url
 
 
 @admin.register(PageUpdates)
@@ -62,7 +63,6 @@ class PageUpdatesAdmin(admin.ModelAdmin):
         return render(request, "admin/upload_csv.html", context)
 
 
-
 @admin.register(ImageUpdates)
 class ImageUpdatesAdmin(admin.ModelAdmin):
     exclude = (
@@ -98,9 +98,14 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
                     temp_object = {
                         "image_url": row.get("url", ""),
                         "image_alt_text": row.get("alt_text", ""),
-                        "image_id": row.get("id", ""),
                         "upload_user": request.user,
                     }
+
+                    img = get_image_by_url(temp_object["image_url"])
+
+                    if img:
+                        # temp_object["model_name"] = img._meta.model_name
+                        temp_object["image_id"] = img.id
 
                     ImageUpdates.objects.create(**temp_object)
 
