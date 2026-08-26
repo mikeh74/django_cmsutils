@@ -62,7 +62,8 @@ class ImageUpdates(models.Model):
     @property
     def image_filename(self):
         if self.image_url:
-            return self.image_url.split("/")[-1]
+            parsed_url = urlparse(self.image_url)
+            return parsed_url.path.split("/")[-1].split("__")[0]  # Get the last part of the path and remove thumbnail suffix
         return None
 
     @property
