@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from django.conf import settings
 from django.db import models
 
@@ -77,13 +79,12 @@ class ImageUpdates(models.Model):
         if not self.image_url:
             return None
 
-        normalized_url = self.image_url.strip().lower()
+        parsed_url = urlparse(self.image_url)
 
-        # strip the domain if it exists
-        if normalized_url.startswith("http://") or normalized_url.startswith(
-            "https://"
-        ):
-            normalized_url = "/" + "/".join(normalized_url.split("/")[3:])
+        if not parsed_url.path:
+            return None
+
+        normalized_url = parsed_url.path.strip().lower()
 
         media_url = settings.MEDIA_URL
 

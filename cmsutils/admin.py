@@ -147,8 +147,6 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         fails = 0
 
         for obj in queryset:
-            img = get_image_by_url(obj.image_url)
-
             try:
                 # Attempt to retrieve the image object from the database using the normalized URL
                 # File.objects.get(url=normalized_url)
