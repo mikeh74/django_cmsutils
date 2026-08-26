@@ -1,13 +1,14 @@
 # admin.py
 import csv
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.shortcuts import redirect, render
 from django.urls import path
+from django.utils import timezone
+from filer.models import Image
 
 from cmsutils.forms import CSVUploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
-from cmsutils.utils import get_image_by_url
 
 
 @admin.register(PageUpdates)
@@ -63,6 +64,21 @@ class PageUpdatesAdmin(admin.ModelAdmin):
         return render(request, "admin/upload_csv.html", context)
 
 
+class NoDateFilter(admin.SimpleListFilter):
+    title = "Date status"
+    parameter_name = "date_status"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("none", "Not updated"),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == "none":
+            return queryset.filter(approved_at__isnull=True)
+        return queryset
+
+
 @admin.register(ImageUpdates)
 class ImageUpdatesAdmin(admin.ModelAdmin):
     exclude = (
@@ -72,6 +88,15 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         "approved_at",
         "approved_user",
     )
+
+    list_display = (
+        "image_filename",
+        "image_alt_text",
+        "approved_at",
+        "approved_user",
+        "image_url",
+    )
+    list_filter = ("approved_user", NoDateFilter)
 
     change_list_template = "admin/cmsutils/imageupdates_changelist.html"
 
@@ -96,16 +121,10 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
 
                 for row in reader:
                     temp_object = {
-                        "image_url": row.get("url", ""),
-                        "image_alt_text": row.get("alt_text", ""),
+                        "image_url": row.get("image_url", ""),
+                        "image_alt_text": row.get("image_alt_text", ""),
                         "upload_user": request.user,
                     }
-
-                    img = get_image_by_url(temp_object["image_url"])
-
-                    if img:
-                        # temp_object["model_name"] = img._meta.model_name
-                        temp_object["image_id"] = img.id
 
                     ImageUpdates.objects.create(**temp_object)
 
@@ -119,3 +138,42 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
             "opts": self.model._meta,
         }
         return render(request, "admin/upload_csv.html", context)
+
+    actions = ["update_images"]
+
+    @admin.action(description="Update selected images", permissions=["change"])
+    def update_images(self, request, queryset):
+
+        fails = 0
+
+        for obj in queryset:
+            img = get_image_by_url(obj.image_url)
+
+            try:
+                # Attempt to retrieve the image object from the database using the normalized URL
+                # File.objects.get(url=normalized_url)
+                # i = Image.objects.get(id=File.objects.get(url=normalized_url).id)
+                img = Image.objects.filter(file=obj.normalized_image_url).first()
+            except Image.DoesNotExist:
+                img = None
+
+            if img:
+                img.default_alt_text = obj.image_alt_text
+                img.save()
+
+                obj.approved_user = request.user
+                obj.approved_at = timezone.now()
+                obj.save()
+            else:
+                fails += 1
+                self.message_user(
+                    request,
+                    f"Image not found for URL: {obj.image_url}",
+                    messages.ERROR,
+                )
+
+        self.message_user(
+            request,
+            f"{queryset.count() - fails} image(s) have had alt_text updated. {fails} image(s) could not be found.",
+            messages.SUCCESS,
+        )
