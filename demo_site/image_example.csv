@@ -4,3 +4,5 @@ http://localhost:8000/media/filer_public/9a/04/9a04c08e-f7fb-432a-9010-4d588eb0b
 http://localhost:8000/media/filer_public/9a/04/9a04c08e-f7fb-432a-9010-4d588eb0b3cd/baz.jpg,"baz alt text 2026-08-26"
 /media/filer_public/9a/04/9a04c08e-f7fb-432a-9010/foobar.jpg,"foobar alt text 2026-08-26"
 "would this even pass","foo"
+/media/filer_public/cf/2a/cf2aa449-310d-4f15-9dc4-4ba61bab1c5e/img2.jpg,"img2 alt text"
+"http://localhost:8000/media/filer_public/af/71/af7112fc-d7a4-45db-9505-e3564f69347d/img6.jpg","img6 - picture of a boat"

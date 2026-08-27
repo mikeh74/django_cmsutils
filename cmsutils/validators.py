@@ -28,3 +28,27 @@ def validate_yaml(value):
         raise ValidationError(
             "YAML parsing error: {}".format(msg), params={"value": value}
         )
+
+def validate_excel_or_csv(file):
+    """Validates that the uploaded file is either an Excel or CSV file.
+
+    Args:
+        file: The uploaded file to validate.
+
+    Raises:
+        ValidationError: If the uploaded file is not an Excel or CSV file.
+    """
+    valid_mime_types = [
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/csv",
+    ]
+    valid_extensions = [".xls", ".xlsx", ".csv"]
+
+    file_mime_type = file.content_type
+    file_extension = file.name.split(".")[-1].lower()
+
+    if file_mime_type not in valid_mime_types or f".{file_extension}" not in valid_extensions:
+        raise ValidationError(
+            "Invalid file type. Please upload an Excel (.xls, .xlsx) or CSV (.csv) file."
+        )

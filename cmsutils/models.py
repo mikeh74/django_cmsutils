@@ -58,12 +58,19 @@ class ImageUpdates(models.Model):
         related_name="image_updates_approved_user",
         verbose_name="Approved by",
     )
+    failed_at = models.DateTimeField(
+        "Failed at",
+        blank=True,
+        null=True,
+    )
 
     @property
     def image_filename(self):
         if self.image_url:
             parsed_url = urlparse(self.image_url)
-            return parsed_url.path.split("/")[-1].split("__")[0]  # Get the last part of the path and remove thumbnail suffix
+            return parsed_url.path.split("/")[-1].split("__")[
+                0
+            ]  # Get the last part of the path and remove thumbnail suffix
         return None
 
     @property
@@ -97,9 +104,7 @@ class ImageUpdates(models.Model):
         # if it is then rewrite to remove filer_public_thumbnails and the thumbnail suffix
         if normalized_url.startswith("filer_public_thumbnails/"):
             # Remove the thumbnail prefix and suffix to get the original image URL
-            normalized_url = normalized_url.replace(
-                "filer_public_thumbnails/", ""
-            )
+            normalized_url = normalized_url.replace("filer_public_thumbnails/", "")
             # Remove the thumbnail suffix (e.g., __40x40_q85_crop_subsampling-2.jpg)
             normalized_url = normalized_url.split("__")[0]
         return normalized_url

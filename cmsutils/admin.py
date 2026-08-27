@@ -8,7 +8,7 @@ from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils import timezone
-from filer.models import Image
+from filer.models import Image, format_html
 
 from cmsutils.forms import CSVUploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
@@ -110,12 +110,23 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
 
     list_display = (
         "image_filename",
+        "failed_warning",
         "image_alt_text",
         "approved_at",
         "approved_user",
         "image_url",
     )
     list_filter = ("approved_user", NoDateFilter)
+
+    def failed_warning(self, obj):
+        if obj.failed_at is not None:
+            return format_html(
+                '<span title="Failed to update {}." style="color:#d97706;">⚠️</span>',
+                obj.failed_at.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+        return ""
+
+    failed_warning.short_description = "Failed"
 
     change_list_template = "admin/cmsutils/imageupdates_changelist.html"
 
@@ -137,8 +148,10 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         return qs
 
     def has_delete_permission(self, request, obj=None):
-        """Don't allow deletion of ImageUpdates objects from the admin interface."""
-        return False
+        """Don't allow deletion of ImageUpdates objects that have been approved."""
+        if obj:
+            return bool(not obj.approved_at)
+        return True
 
     def get_urls(self):
         urls = super().get_urls()
@@ -162,22 +175,9 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         request = HttpRequest()
         request.__dict__.update(original_request.__dict__)
 
-        # Monkey‑patch get_queryset for this request only
-        # original_get_queryset = self.get_queryset
-
-        # def approved_queryset(req):
-        #     return original_get_queryset(req).filter(approved_at__isnull=False)
-
-        # self.get_queryset = approved_queryset
-
         # Call the normal changelist view
         response = self.changelist_view(request)
-
-        # Restore original get_queryset
-        # self.get_queryset = original_get_queryset
-
         response.context_data["title"] = "Approved Image Update Audit List"
-
         return response
 
     def upload_csv(self, request):
@@ -233,11 +233,8 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
                 obj.save()
             else:
                 fails += 1
-                self.message_user(
-                    request,
-                    f"Image not found for URL: {obj.image_url}",
-                    messages.ERROR,
-                )
+                obj.failed_at = timezone.now()
+                obj.save()
 
         self.message_user(
             request,

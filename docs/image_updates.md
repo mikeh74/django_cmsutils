@@ -6,6 +6,7 @@ cover updates to alt text for image records.
 The process should look something like this:
 
 * Import a spreadsheet (CSV or Excel)
+* Limit import filetypes to .csv .xls .xlsx
 * Populate a table with this data
 * Allow admin users to review the imported data
 * Allow admin users to select records to update
@@ -18,6 +19,8 @@ The process should look something like this:
     * update the image upate record to include the date and current user
     * save record
 * Report back successes and failures
+
+Could have audit for previous text.
 
 ## Parsing URLs
 
@@ -58,5 +61,3 @@ the original file path which we can use to filter for the image object:
 
 This returns the first matching record, but since in should be unique this
 should be a safe pattern to use.
-
-
