@@ -4,5 +4,14 @@
     <li>
         <a href="{% url 'admin:imageupdates_upload_csv' %}">Upload CSV</a>
     </li>
+    {% if request.resolver_match.url_name == 'cmsutils_imageupdates_changelist' %}
+    <li>
+        <a href="{% url 'admin:imageupdates_approved_list' %}">Audit</a>
+    </li>
+    {% else %}
+    <li>
+        <a href="{% url 'admin:cmsutils_imageupdates_changelist' %}">Back to main list</a>
+    </li>
+    {% endif %}
     {{ block.super }}
 {% endblock %}

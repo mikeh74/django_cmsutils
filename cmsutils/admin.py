@@ -2,6 +2,9 @@
 import csv
 
 from django.contrib import admin, messages
+
+# from cmsutils.views import approved_list_view
+from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils import timezone
@@ -16,6 +19,13 @@ class PageUpdatesAdmin(admin.ModelAdmin):
     exclude = (
         "model_name",
         "model_id",
+        # "upload_user",
+        "approved_at",
+        "approved_user",
+    )
+
+    readonly_fields = (
+        "page_url",
         "upload_user",
         "approved_at",
         "approved_user",
@@ -89,6 +99,15 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         "approved_user",
     )
 
+    readonly_fields = (
+        "image_url",
+        "image_filename",
+        "upload_user",
+        "created_at",
+        "approved_at",
+        "approved_user",
+    )
+
     list_display = (
         "image_filename",
         "image_alt_text",
@@ -100,6 +119,27 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
 
     change_list_template = "admin/cmsutils/imageupdates_changelist.html"
 
+    def get_queryset(self, request):
+
+        qs = super().get_queryset(request)
+        # Detect which view is being rendered
+        url_name = request.resolver_match.url_name
+
+        if url_name == "cmsutils_imageupdates_changelist":
+            # Main changelist
+            return qs.filter(approved_at__isnull=True)
+
+        if url_name == "imageupdates_approved_list":
+            # Your custom alternate view
+            return qs.filter(approved_at__isnull=False)
+
+        # Fallback (e.g., rejected list, pending list, etc.)
+        return qs
+
+    def has_delete_permission(self, request, obj=None):
+        """Don't allow deletion of ImageUpdates objects from the admin interface."""
+        return False
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -108,8 +148,37 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.upload_csv),
                 name="imageupdates_upload_csv",
             ),
+            path(
+                "approved-list/",
+                self.admin_site.admin_view(self.approved_list_view),
+                name="imageupdates_approved_list",
+            ),
         ]
         return custom_urls + urls
+
+    def approved_list_view(self, request):
+        # Clone the request so we don't mutate the original
+        original_request = request
+        request = HttpRequest()
+        request.__dict__.update(original_request.__dict__)
+
+        # Monkey‑patch get_queryset for this request only
+        # original_get_queryset = self.get_queryset
+
+        # def approved_queryset(req):
+        #     return original_get_queryset(req).filter(approved_at__isnull=False)
+
+        # self.get_queryset = approved_queryset
+
+        # Call the normal changelist view
+        response = self.changelist_view(request)
+
+        # Restore original get_queryset
+        # self.get_queryset = original_get_queryset
+
+        response.context_data["title"] = "Approved Image Update Audit List"
+
+        return response
 
     def upload_csv(self, request):
         if request.method == "POST":
