@@ -3,6 +3,12 @@
 In the first instance the scope of the image updates functionality will only
 cover updates to alt text for image records.
 
+The requirement is to allow users to upload a spreadsheet which includes URLs
+identifying the images and the alt text to insert.
+
+It will not check if alt text already exists and will simply overwrite the
+record if one can be found.
+
 The process should look something like this:
 
 * Import a spreadsheet (CSV or Excel)

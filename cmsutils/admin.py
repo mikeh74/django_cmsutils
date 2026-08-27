@@ -4,7 +4,7 @@ import csv
 from django.contrib import admin, messages
 
 # from cmsutils.views import approved_list_view
-from django.http import HttpRequest
+from django.http import HttpRequest, request
 from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils import timezone
@@ -12,6 +12,7 @@ from filer.models import Image, format_html
 
 from cmsutils.forms import CSVUploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
+from cmsutils.utils import parse_uploaded_file
 
 
 @admin.register(PageUpdates)
@@ -49,10 +50,14 @@ class PageUpdatesAdmin(admin.ModelAdmin):
             form = CSVUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 file = form.cleaned_data["csv_file"]
-                decoded = file.read().decode("utf-8").splitlines()
-                reader = csv.DictReader(decoded)
 
-                for row in reader:
+                try:
+                    rows = parse_uploaded_file(file)
+                except ValueError as e:
+                    self.message_user(request, str(e), level="error")
+                    return redirect("admin:cmsutils_imageupdates_changelist")
+
+                for row in rows:
                     temp_object = {
                         "page_url": row.get("url", ""),
                         "title": row.get("title", ""),
