@@ -55,7 +55,7 @@ class PageUpdatesAdmin(admin.ModelAdmin):
                     rows = parse_uploaded_file(file)
                 except ValueError as e:
                     self.message_user(request, str(e), level="error")
-                    return redirect("admin:cmsutils_imageupdates_changelist")
+                    return redirect("admin:cmsutils_pageupdates_changelist")
 
                 for row in rows:
                     temp_object = {
@@ -190,10 +190,14 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
             form = CSVUploadForm(request.POST, request.FILES)
             if form.is_valid():
                 file = form.cleaned_data["csv_file"]
-                decoded = file.read().decode("utf-8").splitlines()
-                reader = csv.DictReader(decoded)
 
-                for row in reader:
+                try:
+                    rows = parse_uploaded_file(file)
+                except ValueError as e:
+                    self.message_user(request, str(e), level="error")
+                    return redirect("admin:cmsutils_imageupdates_changelist")
+
+                for row in rows:
                     temp_object = {
                         "image_url": row.get("image_url", ""),
                         "image_alt_text": row.get("image_alt_text", ""),
