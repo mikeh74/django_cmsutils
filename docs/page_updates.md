@@ -1,13 +1,14 @@
-# Image Updates
+# Page Updates
 
-In the first instance the scope of the image updates functionality will only
-cover updates to alt text for image records.
+In the first instance the scope of the page updates functionality will only
+cover updates to title and description fields.
 
 The requirement is to allow users to upload a spreadsheet which includes URLs
-identifying the images and the alt text to insert.
+identifying the page that requires updating and the title and description fields
+to update.
 
-It will not check if alt text already exists and will simply overwrite the
-record if one can be found.
+There are a number of steps required to
+
 
 The process should look something like this:
 
@@ -20,10 +21,9 @@ The process should look something like this:
 * Iterate over each selected record:
     * [Parse URL](#parsing-urls)
     * [Normalize URL](#normalizing-urls)
-    * Attempt to match image based on normalized URL
-    * If we have an image then update the image_alt_text and save
-    * update the image upate record to include the date and current user
-    * save record
+    * Attempt to match URL to CMS page or app hook
+        * [Page object update](#updating-page-object)
+        * [App hook update](#updating-apphook-object)
 * Report back successes and failures
 
 Could have audit for previous text.
@@ -67,3 +67,36 @@ the original file path which we can use to filter for the image object:
 
 This returns the first matching record, but since in should be unique this
 should be a safe pattern to use.
+
+## Updating records
+
+Depending on whether we are updating a CMS page or an apphook object will change
+the workflow involved.
+
+## Updating Page Object
+
+If we are updating a CSM page object then the process is as follows:
+
+* Get the page object
+* Check the current status of the page
+    * Page is unpblished - do nothing (creating a draft could potentially cause confusion about the state of the page)
+    * Page is published - check to see if there is a draft
+    * If the page has a draft then do nothing
+    * Page is published and has no draft:
+        * Create a draft
+        * Apply updates to draft
+        * Publish draft
+
+If we run into a fail then we collect the information and stored it to use as
+feedback for the user.
+
+## Updating Apphook Object
+
+If we are updating any other kind of object then we follow this process:
+
+* Get the object
+* Check to see whether we have field mappings to map to title and description for this model
+* Build the update statement based on the field mappings
+* Upate the record
+* Save
+* Collect and report failures

@@ -1,4 +1,4 @@
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import models
@@ -67,7 +67,7 @@ class ImageUpdates(models.Model):
     @property
     def image_filename(self):
         if self.image_url:
-            parsed_url = urlparse(self.image_url)
+            parsed_url = urlsplit(self.image_url)
             return parsed_url.path.split("/")[-1].split("__")[
                 0
             ]  # Get the last part of the path and remove thumbnail suffix
@@ -87,7 +87,7 @@ class ImageUpdates(models.Model):
         if not self.image_url:
             return None
 
-        parsed_url = urlparse(self.image_url)
+        parsed_url = urlsplit(self.image_url)
 
         if not parsed_url.path:
             return None
