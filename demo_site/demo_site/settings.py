@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "easy_thumbnails",
     "cmsutils",
     "demo_site",
+    "news",
 ]
 
 MIDDLEWARE = [
@@ -101,3 +102,14 @@ META_SITE_PROTOCOL = "https"
 META_SITE_DOMAIN = "example.com"
 META_USE_OG_PROPERTIES = True
 META_USE_TWITTER_PROPERTIES = True
+
+# CMSUTILS_MODEL_FIELD_MAP = {
+#     "pages.Page": {
+#         "title": "title",
+#         "description": "description",
+#     },
+#     "news.models.News": {
+#         "title": "name",
+#         "description": "content",
+#     },
+# }

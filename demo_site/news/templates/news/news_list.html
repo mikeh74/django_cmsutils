@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>News List</h1>
+
+{% for item in news_list %}
+    <h2><a href="{{ item.get_absolute_url }}">{{ item.name }}</a></h2>
+    <p>Published on: {{ item.published_date }}</p>
+{% endfor %}
+
+{% endblock %}

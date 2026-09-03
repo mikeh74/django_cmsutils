@@ -3,7 +3,6 @@ import os
 from urllib.parse import urlsplit
 
 import pandas as pd  # handles both .xls and .xlsx cleanly
-from cms.utils.apphook_reload import get_app_urls
 from cms.utils.page import get_page_from_request
 from django.test import RequestFactory
 from django.urls import resolve
@@ -42,7 +41,6 @@ def get_object_from_url(url):
     else:
         return None
 
-
 def _build_temp_request(raw_url):
     parts = urlsplit(raw_url)
     path = parts.path or "/"
@@ -73,6 +71,7 @@ def _resolve_cms_or_apphook(request):
         }
 
     if page and page.application_urls:
+        from cms.utils.apphook_reload import get_app_urls
         apphook = page.application_urls
         urlconfs = get_app_urls(apphook)
 

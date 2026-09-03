@@ -12,7 +12,7 @@ class FieldMappingRegistry:
         if self._registry is not None:
             return
 
-        config = getattr(settings, "MODEL_FIELD_MAP", {})
+        config = getattr(settings, "CMSUTILS_MODEL_FIELD_MAP", {})
         self._registry = {}
 
         for model_label, mapping in config.items():
