@@ -30,16 +30,19 @@ def get_object_from_url(url):
     """
     Given a URL, returns the corresponding model instance if it exists.
     Returns None if the URL does not correspond to a valid page or apphook.
+
+    Returns a dictionary with the following keys:
+    - type: "cms_page", "apphook", or "not_found"
+    - page: The CMS page object if type is "cms_page" or "apphook", else None
+    - apphook: The apphook name if type is "apphook", else None
+    - view: The view function if type is "apphook", else None
+    - model_instance: The model instance if type is "apphook", else None
+    - object: The resolved object (page or model instance) if found, else None
+
     """
     request = _build_temp_request(url)
-    resolved = _resolve_cms_or_apphook(request)
+    return _resolve_cms_or_apphook(request)
 
-    if resolved["type"] == "cms_page":
-        return resolved["page"]
-    elif resolved["type"] == "apphook":
-        return resolved["model_instance"]
-    else:
-        return None
 
 def _build_temp_request(raw_url):
     parts = urlsplit(raw_url)
@@ -68,6 +71,7 @@ def _resolve_cms_or_apphook(request):
             "apphook": None,
             "view": None,
             "model_instance": None,
+            "object": page,
         }
 
     if page and page.application_urls:
@@ -92,6 +96,7 @@ def _resolve_cms_or_apphook(request):
             "apphook": apphook,
             "view": match.func,
             "model_instance": model_instance,
+            "object": model_instance,
         }
 
     return {
@@ -100,6 +105,7 @@ def _resolve_cms_or_apphook(request):
         "apphook": None,
         "view": None,
         "model_instance": None,
+        "object": None,
     }
 
 

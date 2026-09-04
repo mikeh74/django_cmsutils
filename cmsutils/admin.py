@@ -1,18 +1,33 @@
 # admin.py
-import csv
-
 from django.contrib import admin, messages
 
 # from cmsutils.views import approved_list_view
-from django.http import HttpRequest, request
+from django.db.models import ObjectDoesNotExist
+from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils import timezone
-from filer.models import Image, format_html
+from django.utils.html import format_html
+from filer.models import Image
 
-from cmsutils.forms import CSVUploadForm
+from cmsutils.forms import UploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
-from cmsutils.utils import parse_uploaded_file
+from cmsutils.utils import get_object_from_url, parse_uploaded_file
+
+
+class NoDateFilter(admin.SimpleListFilter):
+    title = "Date status"
+    parameter_name = "date_status"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("none", "Not updated"),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == "none":
+            return queryset.filter(approved_at__isnull=True)
+        return queryset
 
 
 @admin.register(PageUpdates)
@@ -32,24 +47,35 @@ class PageUpdatesAdmin(admin.ModelAdmin):
         "approved_user",
     )
 
+    list_display = (
+        "page_url",
+        # "failed_warning",
+        "title",
+        "description",
+        "approved_at",
+        "approved_user",
+    )
+
+    list_filter = ("approved_user", NoDateFilter)
+
     change_list_template = "admin/cmsutils/pageupdates_changelist.html"
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path(
-                "upload-csv/",
-                self.admin_site.admin_view(self.upload_csv),
-                name="pageupdates_upload_csv",
+                "upload/",
+                self.admin_site.admin_view(self.upload),
+                name="pageupdates_upload",
             ),
         ]
         return custom_urls + urls
 
-    def upload_csv(self, request):
+    def upload(self, request):
         if request.method == "POST":
-            form = CSVUploadForm(request.POST, request.FILES)
+            form = UploadForm(request.POST, request.FILES)
             if form.is_valid():
-                file = form.cleaned_data["csv_file"]
+                file = form.cleaned_data["upload_file"]
 
                 try:
                     rows = parse_uploaded_file(file)
@@ -70,28 +96,80 @@ class PageUpdatesAdmin(admin.ModelAdmin):
                 self.message_user(request, "Upload complete.")
                 return redirect("admin:cmsutils_pageupdates_changelist")
         else:
-            form = CSVUploadForm()
+            form = UploadForm()
 
         context = {
             "form": form,
             "opts": self.model._meta,
         }
-        return render(request, "admin/upload_csv.html", context)
+        return render(request, "admin/upload.html", context)
+
+    @admin.action(description="Update selected pages", permissions=["change"])
+    def update_pages(self, request, queryset):
+        """
+        Iterate over selected PageUpdates objects, find the corresponding page
+        object or related model via the URL (using cmsutils.utils.get_object_from_url),
+        and update the title and description fields using cmsutils.registry.registry.get_value()
+        method to retrieve the correct field names based on the model's mapping.
+
+        If the page cannot be found, mark it as failed.
+        """
+
+        fails = 0
+
+        for obj in queryset:
+            try:
+                o = get_object_from_url(obj.url)
+            except ObjectDoesNotExist:
+                o = None
+
+            # we didn't get a match for the URL, so we can't update anything
+            if not o:
+                fails += 1
+                obj.failed_at = timezone.now()
+                obj.save()
+                continue
+
+            if o["type"] == "cms_page":
+
+                # could possibly condense the logic to use the same function for both cms_page and apphook types,
+                # but for now, keep them separate for clarity
+
+                # check the status of the page before updating
+                if o["object"].status == 2:  # 2 is the status for "published"
+                    o["object"].title = obj.title
+                    o["object"].description = obj.description
+                    o["object"].save()
+
+                    obj.approved_user = request.user
+                    obj.approved_at = timezone.now()
+                    obj.save()
+                else:
+                    fails += 1
+                    obj.failed_at = timezone.now()
+                    obj.save()
+
+            elif o["type"] == "apphook":
+                # TODO pull in the registry mapping logic here to update the page title and description
+
+                # do apphook update logic here if needed
+                obj.approved_user = request.user
+                obj.approved_at = timezone.now()
+                obj.save()
+
+            else:
+                fails += 1
+                obj.failed_at = timezone.now()
+                obj.save()
+
+        self.message_user(
+            request,
+            f"{queryset.count() - fails} page(s) have been updated. {fails} page(s) could not be found.",
+            messages.SUCCESS,
+        )
 
 
-class NoDateFilter(admin.SimpleListFilter):
-    title = "Date status"
-    parameter_name = "date_status"
-
-    def lookups(self, request, model_admin):
-        return [
-            ("none", "Not updated"),
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value() == "none":
-            return queryset.filter(approved_at__isnull=True)
-        return queryset
+    actions = ["update_pages"]
 
 
 @admin.register(ImageUpdates)
@@ -162,9 +240,9 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path(
-                "upload-csv/",
-                self.admin_site.admin_view(self.upload_csv),
-                name="imageupdates_upload_csv",
+                "upload/",
+                self.admin_site.admin_view(self.upload),
+                name="imageupdates_upload",
             ),
             path(
                 "approved-list/",
@@ -185,11 +263,11 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
         response.context_data["title"] = "Approved Image Update Audit List"
         return response
 
-    def upload_csv(self, request):
+    def upload(self, request):
         if request.method == "POST":
-            form = CSVUploadForm(request.POST, request.FILES)
+            form = UploadForm(request.POST, request.FILES)
             if form.is_valid():
-                file = form.cleaned_data["csv_file"]
+                file = form.cleaned_data["upload_file"]
 
                 try:
                     rows = parse_uploaded_file(file)
@@ -209,13 +287,13 @@ class ImageUpdatesAdmin(admin.ModelAdmin):
                 self.message_user(request, "Upload complete.")
                 return redirect("admin:cmsutils_imageupdates_changelist")
         else:
-            form = CSVUploadForm()
+            form = UploadForm()
 
         context = {
             "form": form,
             "opts": self.model._meta,
         }
-        return render(request, "admin/upload_csv.html", context)
+        return render(request, "admin/upload.html", context)
 
     actions = ["update_images"]
 
