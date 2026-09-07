@@ -2,6 +2,7 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import models
+from django.utils.functional import cached_property
 
 
 class PageUpdates(models.Model):
@@ -27,6 +28,42 @@ class PageUpdates(models.Model):
         null=True,
         related_name="page_updates_approved_user",
     )
+
+    @cached_property
+    def _related(self):
+        """
+        Returns the model instance corresponding to the page_url.
+        Returns None if the URL does not correspond to a valid page or apphook.
+        """
+
+        try:
+            from cmsutils.utils import get_object_from_url
+
+            result = get_object_from_url(self.page_url)
+
+            return result # Return the full result for use internally in model
+        except Exception:
+            return None
+
+    def is_page(self):
+        """
+        Returns True if the related object is a CMS page, False otherwise.
+        """
+        return self._related and self._related["type"] == "cms_page"
+
+
+    def is_apphook(self):
+        """
+        Returns True if the related object is an apphook, False otherwise.
+        """
+        return self._related and self._related["type"] == "apphook"
+
+
+    def get_related_object(self):
+        """
+        Returns the related model instance (page or apphook) if it exists, else None.
+        """
+        return self._related.get("object") if self._related else None
 
     def __str__(self):
         return f"{self.title} ({self.page_url})"

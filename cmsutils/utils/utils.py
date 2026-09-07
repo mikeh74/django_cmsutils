@@ -109,15 +109,16 @@ def _resolve_cms_or_apphook(request):
     }
 
 
-# myapp/updater.py
-
-def update_from_canonical(instance, data: dict):
+def update_field_from_map(instance, data: dict):
+    """
+    Update the fields of a model instance based on a mapping defined in the registry.
+    """
     mapping = registry.get_mapping(instance.__class__)
     if not mapping:
         raise KeyError(f"No mapping defined for model {instance.__class__}")
 
-    for canonical_field, value in data.items():
-        actual_field = mapping.get(canonical_field)
+    for field, value in data.items():
+        actual_field = mapping.get(field)
         if not actual_field:
             continue  # ignore unknown fields
 

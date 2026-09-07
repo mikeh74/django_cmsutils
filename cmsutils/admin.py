@@ -2,7 +2,7 @@
 from django.contrib import admin, messages
 
 # from cmsutils.views import approved_list_view
-from django.db.models import ObjectDoesNotExist
+# from django.db.models import ObjectDoesNotExist
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 from django.urls import path
@@ -12,7 +12,10 @@ from filer.models import Image
 
 from cmsutils.forms import UploadForm
 from cmsutils.models import ImageUpdates, PageUpdates
-from cmsutils.utils import get_object_from_url, parse_uploaded_file
+from cmsutils.utils import (
+    parse_uploaded_file,
+)
+from cmsutils.utils.page import page_has_draft
 
 
 class NoDateFilter(admin.SimpleListFilter):
@@ -118,28 +121,30 @@ class PageUpdatesAdmin(admin.ModelAdmin):
         fails = 0
 
         for obj in queryset:
-            try:
-                o = get_object_from_url(obj.url)
-            except ObjectDoesNotExist:
-                o = None
+
+            # update functionality should be pushed up into the model class
+            # there should be an interface that can then return the correct message
+            # back to this function to return to the admin interface for the user
+            # to see what happened with each object
 
             # we didn't get a match for the URL, so we can't update anything
-            if not o:
+            if not obj.get_related_object():
                 fails += 1
                 obj.failed_at = timezone.now()
                 obj.save()
                 continue
 
-            if o["type"] == "cms_page":
-
+            if obj.is_page():
                 # could possibly condense the logic to use the same function for both cms_page and apphook types,
                 # but for now, keep them separate for clarity
 
-                # check the status of the page before updating
-                if o["object"].status == 2:  # 2 is the status for "published"
-                    o["object"].title = obj.title
-                    o["object"].description = obj.description
-                    o["object"].save()
+                page = obj.get_related_object()
+
+                if not page_has_draft(page, page.languages):
+                    # check the status of the page before updating
+                    page.title = obj.title
+                    page.description = obj.description
+                    page.save()
 
                     obj.approved_user = request.user
                     obj.approved_at = timezone.now()
@@ -149,8 +154,9 @@ class PageUpdatesAdmin(admin.ModelAdmin):
                     obj.failed_at = timezone.now()
                     obj.save()
 
-            elif o["type"] == "apphook":
+            elif obj.is_apphook():
                 # TODO pull in the registry mapping logic here to update the page title and description
+                # mapping = registry.get_mapping(o["object"].__class__)
 
                 # do apphook update logic here if needed
                 obj.approved_user = request.user
@@ -167,7 +173,6 @@ class PageUpdatesAdmin(admin.ModelAdmin):
             f"{queryset.count() - fails} page(s) have been updated. {fails} page(s) could not be found.",
             messages.SUCCESS,
         )
-
 
     actions = ["update_pages"]
 
