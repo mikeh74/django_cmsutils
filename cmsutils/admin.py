@@ -15,7 +15,6 @@ from cmsutils.models import ImageUpdates, PageUpdates
 from cmsutils.utils import (
     parse_uploaded_file,
 )
-from cmsutils.utils.page import page_has_draft
 
 
 class NoDateFilter(admin.SimpleListFilter):
@@ -110,69 +109,26 @@ class PageUpdatesAdmin(admin.ModelAdmin):
     @admin.action(description="Update selected pages", permissions=["change"])
     def update_pages(self, request, queryset):
         """
-        Iterate over selected PageUpdates objects, find the corresponding page
-        object or related model via the URL (using cmsutils.utils.get_object_from_url),
-        and update the title and description fields using cmsutils.registry.registry.get_value()
-        method to retrieve the correct field names based on the model's mapping.
+        Iterate over selected PageUpdates objects, and run the apply update
+        function from the PageUpdates model to each one.
 
-        If the page cannot be found, mark it as failed.
         """
 
-        fails = 0
+        failures = []
 
         for obj in queryset:
-
-            # update functionality should be pushed up into the model class
-            # there should be an interface that can then return the correct message
-            # back to this function to return to the admin interface for the user
-            # to see what happened with each object
-
-            # we didn't get a match for the URL, so we can't update anything
-            if not obj.get_related_object():
-                fails += 1
-                obj.failed_at = timezone.now()
-                obj.save()
-                continue
-
-            if obj.is_page():
-                # could possibly condense the logic to use the same function for both cms_page and apphook types,
-                # but for now, keep them separate for clarity
-
-                page = obj.get_related_object()
-
-                if not page_has_draft(page, page.languages):
-                    # check the status of the page before updating
-                    page.title = obj.title
-                    page.description = obj.description
-                    page.save()
-
-                    obj.approved_user = request.user
-                    obj.approved_at = timezone.now()
-                    obj.save()
-                else:
-                    fails += 1
-                    obj.failed_at = timezone.now()
-                    obj.save()
-
-            elif obj.is_apphook():
-                # TODO pull in the registry mapping logic here to update the page title and description
-                # mapping = registry.get_mapping(o["object"].__class__)
-
-                # do apphook update logic here if needed
-                obj.approved_user = request.user
-                obj.approved_at = timezone.now()
-                obj.save()
-
-            else:
-                fails += 1
-                obj.failed_at = timezone.now()
-                obj.save()
+            succeeded, message = obj.apply(request.user)
+            if not succeeded:
+                failures.append(f"{obj}: {message}")
 
         self.message_user(
             request,
-            f"{queryset.count() - fails} page(s) have been updated. {fails} page(s) could not be found.",
-            messages.SUCCESS,
+            f"{queryset.count() - len(failures)} page(s) have been updated. "
+            f"{len(failures)} page(s) failed.",
+            messages.SUCCESS if not failures else messages.WARNING,
         )
+        # for failure in failures:
+        #     self.message_user(request, failure, messages.ERROR)
 
     actions = ["update_pages"]
 

@@ -69,9 +69,9 @@ def update_page(page, language="en", data=None):
     # Step 1: get or create draft
     draft = get_or_create_draft(page, language)
 
-    # validate data
-    title = getattr(data, "title", None)
-    description = getattr(data, "description", None)
+    data = data or {}
+    title = data.get("title")
+    description = data.get("description")
 
     # Step 2: update draft placeholders
     update_draft_content(

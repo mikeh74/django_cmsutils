@@ -2,6 +2,7 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.functional import cached_property
 
 
@@ -28,11 +29,23 @@ class PageUpdates(models.Model):
         null=True,
         related_name="page_updates_approved_user",
     )
+    failed_at = models.DateTimeField(
+        "Failed at",
+        blank=True,
+        null=True,
+    )
+    log = models.JSONField(
+        blank=True,
+        null=True,
+        default=dict,
+    )
 
     @cached_property
     def _related(self):
         """
-        Returns the model instance corresponding to the page_url.
+        Returns an object which includes the model instance corresponding to
+        the page_url. It also contains other useful information such as the type
+        of object (CMS page or apphook).
         Returns None if the URL does not correspond to a valid page or apphook.
         """
 
@@ -64,6 +77,52 @@ class PageUpdates(models.Model):
         Returns the related model instance (page or apphook) if it exists, else None.
         """
         return self._related.get("object") if self._related else None
+
+    def apply(self, approved_user):
+        """Apply this update and return whether it succeeded plus a message."""
+        related_object = self.get_related_object()
+
+        if related_object is None:
+            return self._mark_failed("The related object could not be found.")
+
+        try:
+            if self.is_page():
+                from cmsutils.utils.page import page_has_draft, update_page
+
+                language = getattr(related_object, "language", "en")
+                if page_has_draft(related_object, language):
+                    return self._mark_failed("The page already has a draft.")
+
+                update_page(
+                    related_object,
+                    language=language,
+                    data={
+                        "title": self.title,
+                        "description": self.description,
+                    },
+                )
+            elif self.is_apphook():
+                from cmsutils.utils.utils import update_field_from_map
+
+                update_field_from_map(
+                    related_object,
+                    {"title": self.title, "description": self.description},
+                )
+            else:
+                return self._mark_failed("The URL does not identify a supported object.")
+        except Exception as exc:
+            return self._mark_failed(str(exc))
+
+        self.approved_user = approved_user
+        self.approved_at = timezone.now()
+        self.failed_at = None
+        self.save(update_fields=("approved_user", "approved_at", "failed_at", "updated_at"))
+        return True, "Update applied successfully."
+
+    def _mark_failed(self, message):
+        self.failed_at = timezone.now()
+        self.save(update_fields=("failed_at", "updated_at"))
+        return False, message
 
     def __str__(self):
         return f"{self.title} ({self.page_url})"
