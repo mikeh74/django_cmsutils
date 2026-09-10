@@ -1,4 +1,4 @@
 url,title,description
-http://localhost:8000/,"This is a title","This is a description"
-http://localhost/news/1,"My new title","My new description"
-http://localhost/foo/bar,"Page doesn't exist","This page doesn't exist"
+http://localhost:8000/,"Updated home title","Updated home description"
+http://localhost:8000/news/1/,"Updated news title","Updated news description"
+http://localhost:8000/invalid/path/,"Page doesn't exist","This page doesn't exist"

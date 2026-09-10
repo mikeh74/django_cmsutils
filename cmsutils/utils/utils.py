@@ -50,9 +50,17 @@ def _build_temp_request(raw_url):
     parts = urlsplit(raw_url)
     path = parts.path or "/"
     query = parts.query
+    
+    # Extract the hostname for setting HTTP_HOST
+    hostname = parts.hostname or "localhost"
+    port = parts.port
+    if port:
+        http_host = f"{hostname}:{port}"
+    else:
+        http_host = hostname
 
     factory = RequestFactory()
-    request = factory.get(path + (f"?{query}" if query else ""))
+    request = factory.get(path + (f"?{query}" if query else ""), HTTP_HOST=http_host)
 
     request.LANGUAGE_CODE = "en"
     return request
@@ -120,7 +128,7 @@ def _resolve_cms_or_apphook(request):
             "apphook_config": apphook_config,
             "view": match.func if match else None,
             "model_instance": model_instance,
-            "object": model_instance,
+            "object": model_instance if model_instance else None,
         }
 
     return {

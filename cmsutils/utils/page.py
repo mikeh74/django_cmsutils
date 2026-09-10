@@ -15,7 +15,7 @@ def page_has_draft(page, language):
     ).exists()
 
 
-def get_or_create_draft(page, language):
+def get_or_create_draft(page, language, created_by=None):
     """
     Get the draft for the given page and language, or create one if it doesn't exist.
     """
@@ -30,7 +30,17 @@ def get_or_create_draft(page, language):
 
     # No draft exists → create one from the published version
     published = PageContent.objects.get(page=page, language=language)
-    return Version.objects.create(content=published).copy()
+    published_version = published.versions.first()
+    
+    if published_version:
+        # Copy the published version to create a draft
+        # The copy() method requires a created_by parameter
+        draft_version = published_version.copy(created_by=created_by)
+        return draft_version.content
+    else:
+        # Fallback: create a version directly if none exists
+        version = Version.objects.create(content=published, created_by=created_by)
+        return version.content
 
 
 def update_draft_content(draft, title, description):
@@ -47,15 +57,16 @@ def update_draft_content(draft, title, description):
     draft.save()
 
 
-def publish_draft(draft_content):
+def publish_draft(draft_content, user=None):
     """
     Publish the given draft content.
     """
     version = draft_content.versions.first()
-    version.publish()
+    if version:
+        version.publish(user=user)
 
 
-def update_page(page, language="en", data=None):
+def update_page(page, language="en", data=None, user=None):
     """
     Update the given page with the provided data.
 
@@ -67,7 +78,7 @@ def update_page(page, language="en", data=None):
     """
 
     # Step 1: get or create draft
-    draft = get_or_create_draft(page, language)
+    draft = get_or_create_draft(page, language, created_by=user)
 
     data = data or {}
     title = data.get("title")
@@ -81,4 +92,4 @@ def update_page(page, language="en", data=None):
     )
 
     # Step 3: publish
-    publish_draft(draft)
+    publish_draft(draft, user=user)

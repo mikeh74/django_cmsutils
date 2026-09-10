@@ -104,7 +104,7 @@ META_USE_OG_PROPERTIES = True
 META_USE_TWITTER_PROPERTIES = True
 
 CMSUTILS_MODEL_FIELD_MAP = {
-    "news.models.News": {
+    "news.News": {
         "title": "name",
         "description": "content",
     },

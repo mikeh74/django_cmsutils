@@ -100,6 +100,7 @@ class PageUpdates(models.Model):
                         "title": self.title,
                         "description": self.description,
                     },
+                    user=approved_user,
                 )
             elif self.is_apphook():
                 from cmsutils.utils.utils import update_field_from_map
