@@ -1,16 +1,14 @@
 # Page Updates
 
 In the first instance the scope of the page updates functionality will only
-cover updates to title and description fields.
+cover updates to title and description fields only.
 
 The requirement is to allow users to upload a spreadsheet which includes URLs
 identifying the page that requires updating and the title and description fields
 to update.
 
-There are a number of steps required to
-
-
-The process should look something like this:
+There are a number of steps required to update the relevant objects,
+the process should look something like this:
 
 * Import a spreadsheet (CSV or Excel)
 * Limit import filetypes to .csv .xls .xlsx
@@ -68,10 +66,12 @@ the original file path which we can use to filter for the image object:
 This returns the first matching record, but since in should be unique this
 should be a safe pattern to use.
 
+
 ## Updating records
 
 Depending on whether we are updating a CMS page or an apphook object will change
 the workflow involved.
+
 
 ## Updating Page Object
 
@@ -100,3 +100,10 @@ If we are updating any other kind of object then we follow this process:
 * Upate the record
 * Save
 * Collect and report failures
+
+## Issues
+
+When updating a page object should we be updating the `title` field or the
+`page_title` field? What is the current process?
+
+

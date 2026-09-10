@@ -3,9 +3,11 @@ import os
 from urllib.parse import urlsplit
 
 import pandas as pd  # handles both .xls and .xlsx cleanly
+from cms.apphook_pool import apphook_pool
+from cms.appresolver import applications_page_check
 from cms.utils.page import get_page_from_request
 from django.test import RequestFactory
-from django.urls import resolve
+from django.urls import Resolver404, resolve
 
 from cmsutils.registry import registry
 
@@ -64,37 +66,59 @@ def _resolve_cms_or_apphook(request):
 
     page = get_page_from_request(request)
 
+    if not page:
+        # Apphook subpaths usually do not match cms.PageUrl directly.
+        page = applications_page_check(request)
+
     if page and not page.application_urls:
         return {
             "type": "cms_page",
             "page": page,
             "apphook": None,
+            "apphook_instance": None,
+            "apphook_config": None,
             "view": None,
             "model_instance": None,
             "object": page,
         }
 
     if page and page.application_urls:
-        from cms.utils.apphook_reload import get_app_urls
-        apphook = page.application_urls
-        urlconfs = get_app_urls(apphook)
+        apphook_name = page.application_urls
+        apphook_instance = apphook_pool.get_apphook(apphook_name)
 
-        cms_path = page.get_absolute_url(language=request.LANGUAGE_CODE)
-        remaining = request.path[len(cms_path) :]
+        apphook_config = None
+        if apphook_instance and getattr(apphook_instance, "app_config", None) and page.application_namespace:
+            try:
+                apphook_config = apphook_instance.get_config(page.application_namespace)
+            except Exception:
+                apphook_config = None
 
-        match = resolve(remaining, urlconf=urlconfs[0])
-
+        match = None
         model_instance = None
-        if hasattr(match.func, "view_class"):
-            view = match.func.view_class(**match.kwargs)
+
+        try:
+            match = resolve(request.path_info)
+        except Resolver404:
+            pass
+
+        if match and hasattr(match.func, "view_class"):
+            view = match.func.view_class()
+            view.request = request
+            view.args = match.args
+            view.kwargs = match.kwargs
             if hasattr(view, "get_object"):
-                model_instance = view.get_object()
+                try:
+                    model_instance = view.get_object()
+                except Exception:
+                    model_instance = None
 
         return {
             "type": "apphook",
             "page": page,
-            "apphook": apphook,
-            "view": match.func,
+            "apphook": apphook_name,
+            "apphook_instance": apphook_instance,
+            "apphook_config": apphook_config,
+            "view": match.func if match else None,
             "model_instance": model_instance,
             "object": model_instance,
         }
@@ -103,6 +127,8 @@ def _resolve_cms_or_apphook(request):
         "type": "not_found",
         "page": None,
         "apphook": None,
+        "apphook_instance": None,
+        "apphook_config": None,
         "view": None,
         "model_instance": None,
         "object": None,

@@ -1,9 +1,11 @@
 # Creating draft page in Django CMS
 
-### **Concise takeaway**  
+### **Concise takeaway**
 
-In **django CMS 5 + djangocms‑versioning**, you **never update a page directly**.
-You **must** update its **draft `PageContent`**, and if no draft exists, you **create a new Version**, modify its placeholders, then **publish** when ready.
+**In django CMS 5 + djangocms‑versioning - never update a page directly**
+
+You **must** update its **draft `PageContent`**, and if no draft exists, 
+you **create a new Version**, modify its placeholders, then **publish** when ready.
 
 Below is the correct, production‑safe workflow.
 

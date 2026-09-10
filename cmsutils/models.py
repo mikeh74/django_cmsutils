@@ -5,6 +5,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.functional import cached_property
 
+from cmsutils.utils import get_object_from_url
+
 
 class PageUpdates(models.Model):
     page_url = models.URLField(blank=True, null=True)
@@ -50,8 +52,6 @@ class PageUpdates(models.Model):
         """
 
         try:
-            from cmsutils.utils import get_object_from_url
-
             result = get_object_from_url(self.page_url)
 
             return result # Return the full result for use internally in model
